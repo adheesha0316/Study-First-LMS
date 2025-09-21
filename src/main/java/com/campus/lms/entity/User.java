@@ -22,12 +22,12 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
     @Column(nullable = false)
     @JsonIgnore
     private String password;
-
-    @Column(nullable = false, unique = true)
-    private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +21,8 @@ import java.io.IOException;
 @Component
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JWTAuthenticationFilter.class);
+
     @Autowired
     private JWTTokenGenerator jwtTokenGenerator;
 
@@ -31,20 +35,28 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        String path = request.getServletPath();
+        // Skip filter for register & login
+        if (path.startsWith("/api/v1/users/register") || path.startsWith("/api/v1/users/login")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
         String jwt = null;
         String email = null;
 
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
-            email = jwtTokenGenerator.extractEmail(jwt);
+            try {
+                email = jwtTokenGenerator.extractEmail(jwt);
+            } catch (Exception e) {
+                logger.warn("Invalid JWT Token: {}", e.getMessage(), e);
+            }
         }
-
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = customerUserDetailsService.loadUserByUsername(email);
-
 
             if (jwtTokenGenerator.validateToken(jwt)) {
                 UsernamePasswordAuthenticationToken authToken =
@@ -58,4 +70,8 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+
+
 }
+
+
