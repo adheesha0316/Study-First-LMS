@@ -22,10 +22,10 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {}) // Enable CORS
+                .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/users/register", "/api/v1/users/login").permitAll()
-                        .requestMatchers("/api/v1/users/**").hasAnyAuthority("ADMIN")
+                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN") // Only ADMIN
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -33,4 +33,5 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 }

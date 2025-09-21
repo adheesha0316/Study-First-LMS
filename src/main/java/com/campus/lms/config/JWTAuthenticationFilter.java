@@ -47,12 +47,18 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         String email = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwt = authHeader.substring(7);
-            try {
-                email = jwtTokenGenerator.extractEmail(jwt);
-            } catch (Exception e) {
-                logger.warn("Invalid JWT Token: {}", e.getMessage(), e);
+            jwt = authHeader.substring(7).trim();
+            if (!jwt.isEmpty()) {
+                try {
+                    email = jwtTokenGenerator.extractEmail(jwt);
+                } catch (Exception e) {
+                    logger.warn("Invalid JWT Token: {}", e.getMessage());
+                }
+            } else {
+                logger.warn("JWT token is empty after Bearer prefix");
             }
+        } else {
+            logger.warn("Authorization header missing or does not start with Bearer");
         }
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -65,6 +71,8 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                logger.warn("JWT Token validation failed for user: {}", email);
             }
         }
 
