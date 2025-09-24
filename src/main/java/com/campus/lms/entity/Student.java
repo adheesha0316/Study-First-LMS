@@ -6,10 +6,11 @@ import jakarta.persistence.*;
 public class Student {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long studentId;
+    private Integer studentId;
 
     private String name;
     private int age;
+    @Column(nullable = false, unique = true)
     private String nationalId;
     private String phone;
     private String course;
