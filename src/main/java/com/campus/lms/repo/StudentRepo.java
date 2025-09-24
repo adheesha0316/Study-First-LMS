@@ -1,12 +1,13 @@
 package com.campus.lms.repo;
 
 import com.campus.lms.entity.Student;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface StudentRepo {
+public interface StudentRepo extends JpaRepository<Student, Integer> {
     // find by National ID
     Optional<Student> findByNationalId(String nationalId);
 
