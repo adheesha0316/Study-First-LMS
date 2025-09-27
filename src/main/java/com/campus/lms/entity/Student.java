@@ -37,6 +37,8 @@ public class Student {
     // store only file path (ex: uploads/students/default.png)
     private String profileImage;
 
+    private String paymentSlip;
+
     // 🔗 One-to-One with User
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
