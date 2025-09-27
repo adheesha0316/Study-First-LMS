@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface StudentService {
     // Profile
+    StudentDto registerStudent(StudentDto studentDto);
     StudentDto getProfile(Integer studentId);
     StudentDto updateProfile(Integer studentId, StudentDto studentDto);
 
