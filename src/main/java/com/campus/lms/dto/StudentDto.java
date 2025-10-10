@@ -17,7 +17,7 @@ public class StudentDto {
     private String nationalId;
     private String phone;
     private String address;
-    private MultipartFile profileImage;
+    private MultipartFile profileImageFile;
     private String paymentSlip;
     private Integer courseId;  // 🔗 FK reference
 }
