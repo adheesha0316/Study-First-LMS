@@ -54,7 +54,7 @@ public class Course {
     // 🔗 One course can have many students
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private List<Student> students = new ArrayList<>();
+    private Set<Enrollment> enrollments = new HashSet<>();
 
     // 🔗 One course can have many lecturers (Many-to-Many)
     @ManyToMany

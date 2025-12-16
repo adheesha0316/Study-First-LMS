@@ -1,5 +1,7 @@
 package com.campus.lms.entity;
 
+import com.campus.lms.enums.EnrollmentStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +11,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "enrollments")
+@Table(
+        name = "enrollments",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"student_id", "course_id"})
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,21 +26,26 @@ public class Enrollment{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer enrollmentId;
 
+    // 🔗 Student
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
+    @JsonIgnore
     private Student student;
 
+    // 🔗 Course
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    private LocalDateTime enrollmentDate;
+    @Enumerated(EnumType.STRING)
+    private EnrollmentStatus status = EnrollmentStatus.ACTIVE;
 
-    private String status; // e.g., "ACTIVE", "COMPLETED", "CANCELLED"
+    private LocalDateTime enrolledAt;
+
+    private LocalDateTime completedAt;
 
     @PrePersist
     public void onEnroll() {
-        this.enrollmentDate = LocalDateTime.now();
-        if (this.status == null) this.status = "ACTIVE";
+        this.enrolledAt = LocalDateTime.now();
     }
 }
