@@ -34,10 +34,8 @@ public class Student {
 
     private String address;
 
-    // store only file path (ex: uploads/students/default.png)
-    private String profileImage;
-
-    private String paymentSlip;
+    @Builder.Default
+    private String profileImage = "uploads/studentProfileImg/default.png";
 
     // 🔗 One-to-One with User
     @OneToOne
@@ -45,15 +43,17 @@ public class Student {
     @JsonIgnore
     private User user;
 
-    // 🔗 Many-to-Many with Course
-    @ManyToMany
-    @JoinTable(
-            name = "student_courses",
-            joinColumns = @JoinColumn(name = "student_id"),
-            inverseJoinColumns = @JoinColumn(name = "course_id")
-    )
+    // 🔗 One-to-Many: Enrollments
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private Set<Course> courses = new HashSet<>();
+    @Builder.Default
+    private Set<Enrollment> enrollments = new HashSet<>();
+
+    // 🔗 One-to-Many: Payments
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @Builder.Default
+    private Set<Payment> payments = new HashSet<>();
 
     // Audit Fields
     private String createdBy;
@@ -64,7 +64,7 @@ public class Student {
 
     private LocalDateTime updatedAt;
 
-    // Auto set timestamps
+    // JPA lifecycle callbacks for audit
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -73,5 +73,27 @@ public class Student {
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // Optional: helper methods for enrollments
+    public void addEnrollment(Enrollment enrollment) {
+        enrollments.add(enrollment);
+        enrollment.setStudent(this);
+    }
+
+    public void removeEnrollment(Enrollment enrollment) {
+        enrollments.remove(enrollment);
+        enrollment.setStudent(null);
+    }
+
+    // Optional: helper methods for payments
+    public void addPayment(Payment payment) {
+        payments.add(payment);
+        payment.setStudent(this);
+    }
+
+    public void removePayment(Payment payment) {
+        payments.remove(payment);
+        payment.setStudent(null);
     }
 }

@@ -6,13 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public class CourseDto {
+public class EnrollmentDto {
     private Integer courseId;
-    private String courseName;
-    private String description;
-    private int durationMonths;
-    private double fee;
 }

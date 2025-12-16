@@ -1,5 +1,6 @@
 package com.campus.lms.entity;
 
+import com.campus.lms.enums.CourseStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -64,6 +65,10 @@ public class Course {
     )
     @JsonIgnore
     private Set<Lecturer> lecturers = new HashSet<>();
+
+    // Add status field
+    @Enumerated(EnumType.STRING)
+    private CourseStatus status = CourseStatus.ACTIVE;
 
     // Audit fields
     private String createdBy;

@@ -4,15 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public class CourseDto {
+public class PaymentUploadDto {
     private Integer courseId;
-    private String courseName;
-    private String description;
-    private int durationMonths;
-    private double fee;
+    private MultipartFile paymentSlip;
+    private Double amount;
 }
