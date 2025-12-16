@@ -5,7 +5,10 @@ import com.campus.lms.entity.Course;
 import com.campus.lms.entity.Enrollment;
 import com.campus.lms.entity.Payment;
 import com.campus.lms.entity.Student;
+import com.campus.lms.enums.CourseStatus;
+import com.campus.lms.enums.EnrollmentStatus;
 import com.campus.lms.repo.CourseRepo;
+import com.campus.lms.repo.EnrollmentRepo;
 import com.campus.lms.repo.StudentRepo;
 import com.campus.lms.service.StudentService;
 import org.modelmapper.ModelMapper;
@@ -26,17 +29,20 @@ public class StudentServiceImpl implements StudentService {
 
     private final StudentRepo studentRepo;
     private final CourseRepo courseRepo;
+    private final EnrollmentRepo enrollmentRepo;
     private final ModelMapper modelMapper;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
 
     @Autowired
-    public StudentServiceImpl(StudentRepo studentRepo, CourseRepo courseRepo, ModelMapper modelMapper) {
+    public StudentServiceImpl(StudentRepo studentRepo, CourseRepo courseRepo, EnrollmentRepo enrollmentRepo, ModelMapper modelMapper) {
         this.studentRepo = studentRepo;
         this.courseRepo = courseRepo;
+        this.enrollmentRepo = enrollmentRepo;
         this.modelMapper = modelMapper;
     }
+
 
     // -------------------- Student Registration --------------------
     @Override
@@ -101,33 +107,39 @@ public class StudentServiceImpl implements StudentService {
         Course course = courseRepo.findById(dto.getCourseId())
                 .orElseThrow(() -> new RuntimeException("Course not found"));
 
-        // Create Enrollment
+        if (course.getStatus() != CourseStatus.ACTIVE) {
+            throw new RuntimeException("Course is not active");
+        }
+
+        boolean alreadyEnrolled = enrollmentRepo
+                .findByStudent_StudentIdAndCourse_CourseId(studentId, dto.getCourseId())
+                .isPresent();
+
+        if (alreadyEnrolled) {
+            throw new RuntimeException("Student already enrolled");
+        }
+
         Enrollment enrollment = Enrollment.builder()
                 .student(student)
                 .course(course)
-                .status("ACTIVE")
+                .status(EnrollmentStatus.ACTIVE)
                 .build();
 
-        student.addEnrollment(enrollment);
-        studentRepo.save(student);
+        enrollmentRepo.save(enrollment);
 
-        return "Student enrolled in course successfully!";
+        return "Student enrolled successfully";
     }
 
     @Override
     public String unenrollCourse(Integer studentId, Integer courseId) {
-        Student student = studentRepo.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
-
-        Enrollment enrollment = student.getEnrollments().stream()
-                .filter(e -> e.getCourse().getCourseId().equals(courseId))
-                .findFirst()
+        Enrollment enrollment = enrollmentRepo
+                .findByStudent_StudentIdAndCourse_CourseId(studentId, courseId)
                 .orElseThrow(() -> new RuntimeException("Enrollment not found"));
 
-        student.removeEnrollment(enrollment);
-        studentRepo.save(student);
+        enrollment.setStatus(EnrollmentStatus.CANCELLED);
+        enrollmentRepo.save(enrollment);
 
-        return "Student unenrolled from course successfully!";
+        return "Enrollment cancelled successfully";
     }
 
     // -------------------- Payment Upload --------------------
