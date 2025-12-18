@@ -1,6 +1,7 @@
 package com.campus.lms.service;
 
 import com.campus.lms.dto.*;
+import org.springframework.core.io.Resource;
 
 import java.util.List;
 
@@ -35,4 +36,11 @@ public interface StudentService {
     List<String> getQuizzes(Integer courseId);
 
     List<String> getExams(Integer courseId);
+
+    //--------------------assignment download -------------------
+    Resource downloadAssignment(Integer studentId, Integer assignmentId);
+
+    //--------------------assignment upload -------------------
+    String uploadAssignmentSubmission(Integer studentId, Integer assignmentId, AssignmentSubmissionUploadDto dto);
+
 }

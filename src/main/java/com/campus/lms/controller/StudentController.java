@@ -4,6 +4,9 @@ package com.campus.lms.controller;
 import com.campus.lms.dto.*;
 import com.campus.lms.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,50 +33,50 @@ public class StudentController {
     }
 
     // -------------------- Profile --------------------
-    @GetMapping("/{id}/profile")
-    public ResponseEntity<StudentRegisterDto> getProfile(@PathVariable("id") Integer studentId) {
+    @GetMapping("/{studentId}/profile")
+    public ResponseEntity<StudentRegisterDto> getProfile(@PathVariable("studentId") Integer studentId) {
         StudentRegisterDto profile = studentService.getProfile(studentId);
         return ResponseEntity.ok(profile);
     }
 
-    @PutMapping("/{id}/profile")
+    @PutMapping("/update/{studentId}")
     public ResponseEntity<StudentRegisterDto> updateProfile(
-            @PathVariable("id") Integer studentId,
+            @PathVariable("studentId") Integer studentId,
             @RequestBody StudentUpdateDto dto) {
         StudentRegisterDto updated = studentService.updateProfile(studentId, dto);
         return ResponseEntity.ok(updated);
     }
 
     // -------------------- Profile Image Upload --------------------
-    @PostMapping("/{id}/profile-image")
+    @PostMapping("/upload/profile-image/{studentId}")
     public ResponseEntity<String> uploadProfileImage(
-            @PathVariable("id") Integer studentId,
+            @PathVariable("studentId") Integer studentId,
             @ModelAttribute StudentProfileImageDto dto) {
         String message = studentService.uploadProfileImage(studentId, dto);
         return ResponseEntity.ok(message);
     }
 
     // -------------------- Course Enrollment --------------------
-    @PostMapping("/{id}/enroll")
+    @PostMapping("/{studentId}/enroll")
     public ResponseEntity<String> enrollCourse(
-            @PathVariable("id") Integer studentId,
+            @PathVariable("studentId") Integer studentId,
             @RequestBody EnrollmentDto dto) {
         String message = studentService.enrollCourse(studentId, dto);
         return ResponseEntity.ok(message);
     }
 
-    @DeleteMapping("/{id}/unenroll/{courseId}")
+    @DeleteMapping("/{studentId}/unenroll/{courseId}")
     public ResponseEntity<String> unenrollCourse(
-            @PathVariable("id") Integer studentId,
+            @PathVariable("studentId") Integer studentId,
             @PathVariable("courseId") Integer courseId) {
         String message = studentService.unenrollCourse(studentId, courseId);
         return ResponseEntity.ok(message);
     }
 
     // -------------------- Payment Upload --------------------
-    @PostMapping("/{id}/payment")
+    @PostMapping("/{studentId}/payment")
     public ResponseEntity<String> uploadPayment(
-            @PathVariable("id") Integer studentId,
+            @PathVariable("studentId") Integer studentId,
             @ModelAttribute PaymentUploadDto dto) {
         String message = studentService.uploadPaymentSlip(studentId, dto);
         return ResponseEntity.ok(message);
@@ -109,5 +112,31 @@ public class StudentController {
     @GetMapping("/courses/{courseId}/exams")
     public ResponseEntity<List<String>> getExams(@PathVariable Integer courseId) {
         return ResponseEntity.ok(studentService.getExams(courseId));
+    }
+
+    // -------------------- Download Assignment --------------------
+    @GetMapping("/{studentId}/assignments/{assignmentId}/download")
+    public ResponseEntity<Resource> downloadAssignment(
+            @PathVariable Integer studentId,
+            @PathVariable Integer assignmentId) {
+
+        Resource resource = studentService.downloadAssignment(studentId, assignmentId);
+
+        String filename = resource.getFilename();
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(resource);
+    }
+
+    // -------------------- Upload Submission --------------------
+    @PostMapping("/{studentId}/assignments/{assignmentId}/submit")
+    public ResponseEntity<String> submitAssignment(
+            @PathVariable Integer studentId,
+            @PathVariable Integer assignmentId,
+            @ModelAttribute AssignmentSubmissionUploadDto dto) {
+
+        String message = studentService.uploadAssignmentSubmission(studentId, assignmentId, dto);
+        return ResponseEntity.ok(message);
     }
 }

@@ -1,19 +1,17 @@
 package com.campus.lms.service.Impl;
 
 import com.campus.lms.dto.*;
-import com.campus.lms.entity.Course;
-import com.campus.lms.entity.Enrollment;
-import com.campus.lms.entity.Payment;
-import com.campus.lms.entity.Student;
+import com.campus.lms.entity.*;
 import com.campus.lms.enums.CourseStatus;
 import com.campus.lms.enums.EnrollmentStatus;
-import com.campus.lms.repo.CourseRepo;
-import com.campus.lms.repo.EnrollmentRepo;
-import com.campus.lms.repo.StudentRepo;
+import com.campus.lms.enums.PaymentStatus;
+import com.campus.lms.repo.*;
 import com.campus.lms.service.StudentService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +19,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,28 +28,46 @@ import java.util.stream.Collectors;
 public class StudentServiceImpl implements StudentService {
 
     private final StudentRepo studentRepo;
+    private final UserRepo userRepo;
     private final CourseRepo courseRepo;
     private final EnrollmentRepo enrollmentRepo;
+    private final AssignmentRepo assignmentRepo;
+    private final AssignmentSubmissionRepo submissionRepo;
+    private final PaymentRepo paymentRepo;
     private final ModelMapper modelMapper;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
 
     @Autowired
-    public StudentServiceImpl(StudentRepo studentRepo, CourseRepo courseRepo, EnrollmentRepo enrollmentRepo, ModelMapper modelMapper) {
+    public StudentServiceImpl(StudentRepo studentRepo, UserRepo userRepo, CourseRepo courseRepo, EnrollmentRepo enrollmentRepo, AssignmentRepo assignmentRepo, AssignmentSubmissionRepo submissionRepo, PaymentRepo paymentRepo, ModelMapper modelMapper) {
         this.studentRepo = studentRepo;
+        this.userRepo = userRepo;
         this.courseRepo = courseRepo;
         this.enrollmentRepo = enrollmentRepo;
+        this.assignmentRepo = assignmentRepo;
+        this.submissionRepo = submissionRepo;
+        this.paymentRepo = paymentRepo;
         this.modelMapper = modelMapper;
     }
 
 
-    // -------------------- Student Registration --------------------
+    // -------------------- Student Profile --------------------
     @Override
     public StudentRegisterDto registerStudent(StudentRegisterDto dto) {
+        // Load the user
+        User user = userRepo.findById(dto.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Map DTO to Student
         Student student = modelMapper.map(dto, Student.class);
-        // link with existing User if needed
+
+        // Attach the user
+        student.setUser(user);
+
+        // Save
         Student saved = studentRepo.save(student);
+
         return modelMapper.map(saved, StudentRegisterDto.class);
     }
 
@@ -74,7 +92,7 @@ public class StudentServiceImpl implements StudentService {
         return modelMapper.map(updated, StudentRegisterDto.class);
     }
 
-    // -------------------- Profile Image Upload --------------------
+    // -------------------- Profile Image --------------------
     @Override
     public String uploadProfileImage(Integer studentId, StudentProfileImageDto dto) {
         Student student = studentRepo.findById(studentId)
@@ -84,12 +102,21 @@ public class StudentServiceImpl implements StudentService {
         if (file == null || file.isEmpty()) return "No file provided";
 
         try {
-            Path folder = Paths.get(uploadDir + "/studentProfileImg/");
-            Files.createDirectories(folder);
-            Path path = folder.resolve(file.getOriginalFilename());
-            Files.write(path, file.getBytes());
+            // Folder path
+            Path folder = Paths.get("uploads/studentProfileImg");
+            if (!Files.exists(folder)) {
+                Files.createDirectories(folder);
+            }
 
-            student.setProfileImage(path.toString());
+            // Create a unique file name
+            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path path = folder.resolve(fileName);
+
+            // Write file to disk
+            Files.write(path, file.getBytes(), StandardOpenOption.CREATE);
+
+            // Save relative path (not absolute) in DB
+            student.setProfileImage("studentProfileImg/" + fileName);
             studentRepo.save(student);
 
             return "Profile image uploaded successfully!";
@@ -126,7 +153,6 @@ public class StudentServiceImpl implements StudentService {
                 .build();
 
         enrollmentRepo.save(enrollment);
-
         return "Student enrolled successfully";
     }
 
@@ -138,36 +164,40 @@ public class StudentServiceImpl implements StudentService {
 
         enrollment.setStatus(EnrollmentStatus.CANCELLED);
         enrollmentRepo.save(enrollment);
-
         return "Enrollment cancelled successfully";
     }
 
-    // -------------------- Payment Upload --------------------
+    // -------------------- Payment --------------------
     @Override
     public String uploadPaymentSlip(Integer studentId, PaymentUploadDto dto) {
         Student student = studentRepo.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
+        Course course = courseRepo.findById(dto.getCourseId())
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
         MultipartFile file = dto.getPaymentSlip();
-        if (file == null || file.isEmpty()) return "No file provided";
+        if (file == null || file.isEmpty()) return "No payment slip provided";
 
         try {
-            Path folder = Paths.get(uploadDir + "/paymentSlip/");
+            Path folder = Paths.get(uploadDir, "paymentSlip");
             Files.createDirectories(folder);
-            Path path = folder.resolve(file.getOriginalFilename());
-            Files.write(path, file.getBytes());
+
+            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path path = folder.resolve(fileName);
+            Files.write(path, file.getBytes(), StandardOpenOption.CREATE);
 
             Payment payment = Payment.builder()
                     .student(student)
+                    .course(course)
                     .amount(dto.getAmount())
-                    .paymentSlip(path.toString())
-                    .status("PENDING")
+                    .slipPath(path.toString())
+                    .paidAt(LocalDateTime.now())
+                    .status(PaymentStatus.PENDING)
                     .build();
 
-            student.addPayment(payment);
-            studentRepo.save(student);
-
-            return "Payment slip uploaded successfully!";
+            paymentRepo.save(payment);
+            return "Payment slip uploaded successfully. Waiting for admin approval.";
         } catch (IOException e) {
             throw new RuntimeException("Failed to upload payment slip", e);
         }
@@ -176,7 +206,8 @@ public class StudentServiceImpl implements StudentService {
     // -------------------- Courses & Materials --------------------
     @Override
     public List<CourseDto> getAllCourses() {
-        return courseRepo.findAll().stream()
+        return courseRepo.findAll()
+                .stream()
                 .map(course -> modelMapper.map(course, CourseDto.class))
                 .collect(Collectors.toList());
     }
@@ -192,7 +223,7 @@ public class StudentServiceImpl implements StudentService {
     public List<String> getCourseRecordings(Integer courseId) {
         Course course = courseRepo.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
-        return course.getMaterials();
+        return course.getRecordings();
     }
 
     @Override
@@ -214,5 +245,60 @@ public class StudentServiceImpl implements StudentService {
         Course course = courseRepo.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
         return course.getExams();
+    }
+
+    // -------------------- Download Assignment --------------------
+    @Override
+    public Resource downloadAssignment(Integer studentId, Integer assignmentId) {
+        // Optional: verify student is enrolled in the course of the assignment
+        Assignment assignment = assignmentRepo.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        String filePath = assignment.getFilePath();
+        if (filePath == null || filePath.isEmpty()) {
+            throw new RuntimeException("Assignment file not found");
+        }
+
+        Path path = Paths.get(filePath);
+        Resource resource = new FileSystemResource(path.toFile());
+
+        if (!resource.exists()) {
+            throw new RuntimeException("File not found on server");
+        }
+
+        return resource;
+    }
+
+    @Override
+    public String uploadAssignmentSubmission(Integer studentId, Integer assignmentId, AssignmentSubmissionUploadDto dto) {
+        Student student = studentRepo.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        Assignment assignment = assignmentRepo.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        MultipartFile file = dto.getFile(); // get the file from DTO
+        if (file == null || file.isEmpty()) return "No file provided";
+
+        try {
+            Path folder = Paths.get("uploads/assignmentSubmissions");
+            Files.createDirectories(folder);
+
+            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path path = folder.resolve(fileName);
+
+            Files.write(path, file.getBytes(), StandardOpenOption.CREATE);
+
+            AssignmentSubmission submission = AssignmentSubmission.builder()
+                    .assignment(assignment)
+                    .student(student)
+                    .filePath(path.toString())
+                    .build();
+
+            submissionRepo.save(submission);
+
+            return "Assignment submitted successfully!";
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to submit assignment", e);
+        }
     }
 }

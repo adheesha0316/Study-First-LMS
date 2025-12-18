@@ -37,10 +37,13 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
         // Skip filter for register & login
-        if (path.startsWith("/api/v1/users/register") || path.startsWith("/api/v1/users/login")) {
+        if (path.startsWith("/api/v1/users/register")
+                || path.startsWith("/api/v1/users/login")
+                || path.startsWith("/api/v1/students/register")) {
             filterChain.doFilter(request, response);
             return;
         }
+
 
         final String authHeader = request.getHeader("Authorization");
         String jwt = null;

@@ -10,10 +10,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class StudentRegisterDto {
-    private String email;   // link with User
+    private Integer studentId;
     private String name;
     private int age;
     private String nationalId;
     private String phone;
     private String address;
+    private String profileImage;
+    private Integer userId;
 }

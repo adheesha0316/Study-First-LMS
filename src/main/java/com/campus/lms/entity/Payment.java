@@ -1,5 +1,6 @@
 package com.campus.lms.entity;
 
+import com.campus.lms.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,21 +20,27 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer paymentId;
 
+    private Double amount;
+
+    // ex: uploads/paymentSlip/SLIP_1234.png
+    @Column(nullable = false)
+    private String slipPath;
+
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    private Double amount;
+    @ManyToOne
+    @JoinColumn(name = "course_id", nullable = false)
+    private Course course;
 
-    private String paymentSlip; // file path
+    private LocalDateTime paidAt;
 
-    private LocalDateTime paymentDate;
-
-    private String status; // e.g., "PENDING", "PAID", "FAILED"
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus status = PaymentStatus.PENDING;
 
     @PrePersist
-    public void onPayment() {
-        this.paymentDate = LocalDateTime.now();
-        if (this.status == null) this.status = "PENDING";
+    public void onCreate() {
+        this.paidAt = LocalDateTime.now();
     }
 }
