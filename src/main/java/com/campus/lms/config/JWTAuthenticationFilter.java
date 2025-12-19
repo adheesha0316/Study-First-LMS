@@ -39,7 +39,9 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         // Skip filter for register & login
         if (path.startsWith("/api/v1/users/register")
                 || path.startsWith("/api/v1/users/login")
-                || path.startsWith("/api/v1/students/register")) {
+                || path.startsWith("/api/v1/students/register")
+                || path.startsWith("/api/v1/lecturers/register")
+        ) {
             filterChain.doFilter(request, response);
             return;
         }

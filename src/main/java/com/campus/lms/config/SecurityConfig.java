@@ -33,11 +33,12 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/users/register",
                                 "/api/v1/users/login",
-                                "/api/v1/students/register"
+                                "/api/v1/students/register",
+                                "/api/v1/lecturers/register"
                         ).permitAll()
 
                         // Optional: allow all student endpoints temporarily for testing
-                        .requestMatchers("/api/v1/students/**").permitAll()
+                        .requestMatchers("/api/v1/lecturers/**").permitAll()
 
                         // Admin-only endpoints
                         .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
