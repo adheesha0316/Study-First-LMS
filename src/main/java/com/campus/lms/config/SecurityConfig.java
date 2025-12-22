@@ -21,37 +21,34 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF because JWT is stateless
                 .csrf(csrf -> csrf.disable())
-
-                // Enable CORS for frontend / Postman testing
                 .cors(cors -> {})
 
-                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+
                         .requestMatchers(
                                 "/api/v1/users/register",
-                                "/api/v1/users/login",
-                                "/api/v1/students/register",
-                                "/api/v1/lecturers/register"
+                                "/api/v1/users/login"
                         ).permitAll()
 
-                        // Optional: allow all student endpoints temporarily for testing
-                        .requestMatchers("/api/v1/lecturers/**").permitAll()
+                        .requestMatchers("/api/v1/lecturer-requests/submit")
+                        .hasAnyAuthority("USER", "STUDENT")
 
-                        // Admin-only endpoints
-                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                        .requestMatchers(
+                                "/api/v1/lecturer-requests/all",
+                                "/api/v1/lecturer-requests/approve/**",
+                                "/api/v1/lecturer-requests/reject/**"
+                        ).hasAuthority("ADMIN")
 
-                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
 
-                // Stateless session (JWT)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
 
-                // Add JWT filter before UsernamePasswordAuthenticationFilter
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
