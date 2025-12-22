@@ -7,8 +7,16 @@ import com.campus.lms.repo.*;
 import com.campus.lms.service.LecturerService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,6 +39,16 @@ public class LecturerServiceImpl implements LecturerService {
         this.submissionRepo = submissionRepo;
         this.modelMapper = modelMapper;
     }
+
+    @Value("${file.upload-dir:uploads}")
+    private String uploadDir;
+
+    @Value("${file.upload.lecturer-profile:lectuerProfileImg}")
+    private String lecturerProfileFolder;
+
+
+    private static final String DEFAULT_IMAGE =
+            "uploads/lectuerProfileImg/default.png";
 
     // ------------------- Lecturer Profile -------------------
     @Override
@@ -76,6 +94,78 @@ public class LecturerServiceImpl implements LecturerService {
         Lecturer updated = lecturerRepo.save(lecturer);
         return modelMapper.map(updated, LecturerDto.class);
     }
+
+    @Override
+    public void uploadOrUpdateProfileImage(Integer lecturerId, MultipartFile image) {
+        Lecturer lecturer = lecturerRepo.findById(lecturerId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+        // Check if file is empty
+        if (image == null || image.isEmpty()) {
+            throw new RuntimeException("Image file is empty");
+        }
+
+        // Validate content type (jpg/png)
+        String contentType = image.getContentType();
+        if (contentType == null ||
+                !(contentType.equals("image/jpeg") || contentType.equals("image/png"))) {
+            throw new RuntimeException("Only JPG and PNG images are allowed");
+        }
+
+        // Validate max file size (2 MB)
+        long maxFileSize = 2 * 1024 * 1024; // 2 MB
+        if (image.getSize() > maxFileSize) {
+            throw new RuntimeException("File size exceeds 2 MB limit");
+        }
+
+        try {
+            // Directory path
+            Path directoryPath = Paths.get(uploadDir, lecturerProfileFolder);
+            Files.createDirectories(directoryPath);
+
+            // File name
+            String fileName = "lecturer_" + lecturerId + "_" +
+                    System.currentTimeMillis() + "_" +
+                    image.getOriginalFilename();
+
+            Path newFilePath = directoryPath.resolve(fileName);
+
+            // Delete old image (if not default)
+            if (lecturer.getProfileImage() != null &&
+                    !lecturer.getProfileImage().equals(DEFAULT_IMAGE)) {
+
+                Path oldImagePath = Paths.get(uploadDir)
+                        .resolve(lecturer.getProfileImage().replace("uploads/", ""));
+                Files.deleteIfExists(oldImagePath);
+            }
+
+            // Save new image
+            Files.copy(image.getInputStream(), newFilePath,
+                    StandardCopyOption.REPLACE_EXISTING);
+
+            // Save relative path in DB
+            lecturer.setProfileImage("uploads/" + lecturerProfileFolder + "/" + fileName);
+            lecturerRepo.save(lecturer);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload lecturer profile image", e);
+        }
+    }
+
+    @Override
+    public void uploadOrUpdateProfileImageSecure(Integer lecturerId, MultipartFile image, String loggedInEmail) {
+        Lecturer lecturer = lecturerRepo.findById(lecturerId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+        // Security check
+        if (!lecturer.getUser().getEmail().equals(loggedInEmail)) {
+            throw new RuntimeException("You are not allowed to update this profile");
+        }
+
+        // Reuse existing logic
+        uploadOrUpdateProfileImage(lecturerId, image);
+    }
+
 
     @Override
     public void deleteLecturer(Integer lecturerId) {

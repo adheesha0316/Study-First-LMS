@@ -34,9 +34,8 @@ public class LecturerRequestServiceImpl implements LecturerRequestService {
 
 
     // ================= USER → request lecturer role =================
-
     @Override
-    public LecturerRequestDto createLecturerRequest(LecturerRequestDto requestDto, String userEmail) {
+    public void createLecturerRequest(LecturerRequestDto dto, String userEmail) {
         User user = userRepo.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -44,26 +43,55 @@ public class LecturerRequestServiceImpl implements LecturerRequestService {
             throw new RuntimeException("Lecturer request already submitted");
         }
 
-        LecturerRequest request = modelMapper.map(requestDto, LecturerRequest.class);
-        request.setUser(user);
-        request.setStatus(LecturerRequestStatus.PENDING);
+        LecturerRequest request = LecturerRequest.builder()
+                .name(dto.getName())
+                .phone(dto.getPhone())
+                .address(dto.getAddress())
+                .highestQualification(dto.getHighestQualification())
+                .specialization(dto.getSpecialization())
+                .yearsOfExperience(dto.getYearsOfExperience())
+                .designation(dto.getDesignation())
+                .department(dto.getDepartment())
+                .bio(dto.getBio())
+                .achievements(dto.getAchievements())
+                .status(LecturerRequestStatus.PENDING)
+                .user(user)
+                .build();
 
-        LecturerRequest saved = lecturerRequestRepo.save(request);
-        return modelMapper.map(saved, LecturerRequestDto.class);
+        lecturerRequestRepo.save(request);
+    }
+
+    // ================= USER → request lecturer role delete =================
+    @Override
+    public void deleteRequest(Integer requestId, String userEmail) {
+        LecturerRequest request = lecturerRequestRepo.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        // Check ownership
+        if (!request.getUser().getEmail().equals(userEmail)) {
+            throw new RuntimeException("You can only cancel your own request");
+        }
+
+        lecturerRequestRepo.delete(request);
+    }
+
+    // ================= ADMIN → view requests =================
+    @Override
+    public LecturerRequest getRequestById(Integer requestId) {
+        return lecturerRequestRepo.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
     }
 
     // ================= ADMIN → view all requests =================
-
     @Override
-    public List<LecturerRequestDto> getAllRequests() {
+    public List<LecturerRequest> getAllRequests() {
         return lecturerRequestRepo.findAll()
                 .stream()
-                .map(req -> modelMapper.map(req, LecturerRequestDto.class))
+                .map(req -> modelMapper.map(req, LecturerRequest.class))
                 .collect(Collectors.toList());
     }
 
     // ================= ADMIN → approve lecturer =================
-
     @Override
     public void approveLecturerRequest(Integer requestId, String adminEmail) {
         LecturerRequest request = lecturerRequestRepo.findById(requestId)

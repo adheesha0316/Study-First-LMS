@@ -29,55 +29,41 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private CustomerUserDetailsService customerUserDetailsService;
 
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path.equals("/api/v1/users/login") || path.equals("/api/v1/users/register");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String path = request.getServletPath();
-        // Skip filter for register & login
-        if (path.startsWith("/api/v1/users/register")
-                || path.startsWith("/api/v1/users/login")
-                || path.startsWith("/api/v1/students/register")
-                || path.startsWith("/api/v1/lecturers/register")
-        ) {
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-
-        final String authHeader = request.getHeader("Authorization");
-        String jwt = null;
-        String email = null;
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwt = authHeader.substring(7).trim();
-            if (!jwt.isEmpty()) {
-                try {
-                    email = jwtTokenGenerator.extractEmail(jwt);
-                } catch (Exception e) {
-                    logger.warn("Invalid JWT Token: {}", e.getMessage());
-                }
-            } else {
-                logger.warn("JWT token is empty after Bearer prefix");
-            }
-        } else {
-            logger.warn("Authorization header missing or does not start with Bearer");
-        }
+        String jwt = authHeader.substring(7);
+        String email = jwtTokenGenerator.extractEmail(jwt);
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
             UserDetails userDetails = customerUserDetailsService.loadUserByUsername(email);
 
             if (jwtTokenGenerator.validateToken(jwt)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-            } else {
-                logger.warn("JWT Token validation failed for user: {}", email);
             }
         }
 

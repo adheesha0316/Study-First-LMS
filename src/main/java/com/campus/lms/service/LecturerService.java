@@ -1,6 +1,7 @@
 package com.campus.lms.service;
 
 import com.campus.lms.dto.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -9,6 +10,12 @@ public interface LecturerService {
     LecturerDto createLecturer(LecturerDto dto);
     LecturerDto getLecturerById(Integer lecturerId);
     LecturerDto updateLecturer(Integer lecturerId, LecturerDto dto);
+    void uploadOrUpdateProfileImage(Integer lecturerId, MultipartFile image);
+    void uploadOrUpdateProfileImageSecure(
+            Integer lecturerId,
+            MultipartFile image,
+            String loggedInEmail
+    );
     void deleteLecturer(Integer lecturerId);
     List<LecturerDto> getAllLecturers();
 

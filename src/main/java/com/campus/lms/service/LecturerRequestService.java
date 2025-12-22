@@ -8,10 +8,16 @@ import java.util.List;
 
 public interface LecturerRequestService {
     // ================= USER → request lecturer role =================
-    LecturerRequestDto createLecturerRequest(LecturerRequestDto requestDto, String userEmail);
+    void createLecturerRequest(LecturerRequestDto dto, String userEmail);
+
+    // ================= USER → cancel request =================
+    void deleteRequest(Integer requestId, String userEmail);
+
+    // Optional: get a single request by id
+    LecturerRequest getRequestById(Integer requestId);
 
     // ================= ADMIN → view all requests =================
-    List<LecturerRequestDto> getAllRequests();
+    List<LecturerRequest> getAllRequests();
 
     // ================= ADMIN → approve lecturer =================
     void approveLecturerRequest(Integer requestId, String adminEmail);

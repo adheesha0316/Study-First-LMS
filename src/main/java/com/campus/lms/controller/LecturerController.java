@@ -4,7 +4,9 @@ import com.campus.lms.dto.*;
 import com.campus.lms.service.LecturerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -37,6 +39,22 @@ public class LecturerController {
             @RequestBody LecturerDto dto) {
         return ResponseEntity.ok(lecturerService.updateLecturer(lecturerId, dto));
     }
+
+    @PutMapping("/{lecturerId}/profile-image")
+    public ResponseEntity<String> uploadOrUpdateProfileImage(
+            @PathVariable Integer lecturerId,
+            @RequestParam("image") MultipartFile image,
+            Authentication authentication
+    ) {
+        String loggedInEmail = authentication.getName();
+
+        lecturerService.uploadOrUpdateProfileImageSecure(
+                lecturerId, image, loggedInEmail
+        );
+
+        return ResponseEntity.ok("Profile image updated successfully");
+    }
+
 
     @DeleteMapping("/delete/{lecturerId}")
     public ResponseEntity<String> deleteLecturer(@PathVariable Integer lecturerId) {
